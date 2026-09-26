@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bomber Cerdas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#12142b; --panel:#1c2044; --wall:#3a4066; --soft:#5b4a8a;
+  --floor:#232752; --accent:#ffcd54; --fire:#ff6b4a; --good:#4bd28f; --bad:#ff5d7a;
+  --text:#f2f0ff; --sub:#a8a6d8;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;}
+body{
+  background:radial-gradient(circle at 50% 0%, #1e2350, var(--bg) 60%);
+  color:var(--text); font-family:'Nunito',sans-serif; display:flex; flex-direction:column; align-items:center;
+  padding:16px; min-height:100%;
+}
+.hidden{display:none !important;}
+h1{
+  font-family:'Press Start 2P',monospace; font-size:clamp(14px,4vw,22px); color:var(--accent);
+  text-shadow:3px 3px 0 #7a3b00; margin:6px 0 2px; letter-spacing:1px; text-align:center;
+}
+.tag{color:var(--sub); font-size:13px; margin-bottom:12px; text-align:center; max-width:480px;}
+
+/* ---- Cover screen ---- */
+#coverScreen{
+  width:100%; max-width:380px; display:flex; flex-direction:column; align-items:center; gap:16px;
+}
+#coverScreen img{
+  width:100%; max-width:380px; border-radius:14px; border:2px solid var(--wall);
+  box-shadow:0 10px 30px rgba(0,0,0,.5); object-fit:cover;
+}
+
+/* ---- Start screen ---- */
+#startScreen{
+  background:var(--panel); border:2px solid var(--wall); border-radius:14px; padding:22px;
+  width:100%; max-width:380px; display:flex; flex-direction:column; gap:12px;
+}
+#startScreen h2{font-family:'Press Start 2P',monospace; font-size:14px; color:var(--accent); margin:0 0 4px; text-align:center;}
+.formRow{display:flex; flex-direction:column; gap:4px; text-align:left;}
+.formRow label{font-size:12px; font-weight:800; color:var(--sub);}
+.formRow select{
+  background:var(--floor); color:var(--text); border:2px solid var(--wall); border-radius:8px;
+  padding:10px; font-family:'Nunito',sans-serif; font-size:14px;
+}
+.formRow select:disabled{opacity:.5;}
+#prevScoreInfo, #serverScoreInfo{font-size:12px; color:var(--sub); min-height:16px; text-align:center;}
+#startError{font-size:12px; color:var(--bad); min-height:16px; text-align:center;}
+
+.hud{
+  display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:10px;
+  font-family:'Press Start 2P',monospace; font-size:10px;
+}
+.chip{background:var(--panel); border:2px solid var(--wall); border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px;}
+.chip b{color:var(--accent); font-size:11px;}
+#muteBtn{cursor:pointer;}
+#wrap{position:relative;}
+canvas{background:var(--floor); border-radius:10px; border:3px solid var(--wall); box-shadow:0 10px 30px rgba(0,0,0,.5); touch-action:none; max-width:100%; height:auto; transition:border-color .6s, box-shadow .6s;}
+canvas.arenaHidden{visibility:hidden;}
+#overlay{
+  position:absolute; inset:0; background:rgba(10,10,25,.92); border-radius:10px; display:none;
+  flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; gap:14px;
+}
+#overlay.show{display:flex;}
+#overlay.quizBg{background:#000;}
+#overlay.quizFull{
+  position:fixed; inset:0; width:100vw; height:100vh; border-radius:0;
+  z-index:1000; padding:28px 20px; justify-content:center;
+}
+#overlay.quizFull #qtext{max-width:520px; font-size:22px;}
+#overlay.quizFull #choices{max-width:480px;}
+#overlay.quizFull #ovTitle{font-size:20px;}
+#overlay h2{font-family:'Press Start 2P',monospace; font-size:16px; color:var(--accent); margin:0;}
+#qtext{font-size:19px; font-weight:800; max-width:340px;}
+#qtext img{max-width:100%; max-height:140px; object-fit:contain; border-radius:8px; margin-bottom:8px;}
+#choices{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:360px;}
+.choice{
+  background:var(--panel); border:2px solid var(--wall); color:var(--text); font-weight:800; font-size:16px;
+  padding:12px 8px; border-radius:10px; cursor:pointer;
+}
+.choice:hover{border-color:var(--accent);}
+.choice.correct{background:var(--good); border-color:var(--good); color:#062915;}
+.choice.wrong{background:var(--bad); border-color:var(--bad); color:#3a0010;}
+#feedback{font-size:14px; min-height:20px; color:var(--sub);}
+.bigbtn{
+  font-family:'Press Start 2P',monospace; font-size:12px; background:var(--accent); color:#3a2400; border:none;
+  padding:12px 18px; border-radius:8px; cursor:pointer; margin-top:6px;
+}
+.bigbtn:disabled{opacity:.5; cursor:default;}
+#controls{display:none; margin-top:14px; user-select:none;}
+#controls .row{display:flex; justify-content:center; gap:8px;}
+#controls button{
+  width:56px; height:56px; font-size:22px; background:var(--panel); border:2px solid var(--wall); color:var(--text);
+  border-radius:10px; margin:4px;
+}
+#bombBtn{background:var(--fire); border-color:#a33a1e; color:#fff; font-size:20px;}
+#howto{color:var(--sub); font-size:12px; margin-top:10px; text-align:center; max-width:460px; line-height:1.5;}
+@media (max-width:640px){ #controls{display:block;} }
+
+#hitFlash{
+  position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; opacity:0; pointer-events:none;
+}
+#hitFlash.show{opacity:1; animation:flashPulse 1.4s ease forwards;}
+#hitFlash.bomb{background:radial-gradient(circle, rgba(255,150,40,.6), rgba(120,20,0,.92) 70%);}
+#hitFlash.monster{background:radial-gradient(circle, rgba(160,60,255,.55), rgba(30,0,60,.92) 70%);}
+#hitFlash .hitText{
+  font-family:'Press Start 2P',monospace; color:#fff; font-size:clamp(20px,6vw,42px);
+  text-shadow:0 0 24px rgba(255,60,20,.9), 4px 4px 0 #3a0000; text-align:center; padding:0 20px;
+  animation:hitPop .45s cubic-bezier(.2,1.6,.4,1);
+}
+#hitFlash .hitSub{
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:clamp(14px,3vw,18px); color:#ffd9d9;
+}
+@keyframes flashPulse{
+  0%{opacity:0;} 8%{opacity:1;} 75%{opacity:1;} 100%{opacity:0;}
+}
+@keyframes hitPop{
+  0%{transform:scale(.2) rotate(-8deg); opacity:0;} 55%{transform:scale(1.18) rotate(3deg); opacity:1;} 100%{transform:scale(1) rotate(0);}
+}
+body.shake{animation:shakeAnim .5s;}
+@keyframes shakeAnim{
+  0%,100%{transform:translate(0,0);}
+  10%{transform:translate(-10px,-5px);} 20%{transform:translate(10px,5px);}
+  30%{transform:translate(-8px,5px);} 40%{transform:translate(8px,-5px);}
+  50%{transform:translate(-6px,3px);} 60%{transform:translate(6px,-3px);}
+  70%{transform:translate(-3px,3px);} 80%{transform:translate(3px,-3px);}
+  90%{transform:translate(-1px,1px);}
+}
+
+#bonusFlash{
+  position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; opacity:0; pointer-events:none;
+  background:radial-gradient(circle, rgba(255,220,120,.55), rgba(10,60,30,.92) 70%);
+}
+#bonusFlash.show{opacity:1; animation:flashPulse 1.8s ease forwards;}
+#bonusFlash .bonusHeart{
+  font-size:clamp(50px,16vw,110px);
+  animation:bonusPop 1.8s cubic-bezier(.2,1.6,.4,1);
+  filter:drop-shadow(0 0 24px rgba(255,255,255,.8));
+}
+#bonusFlash .bonusText{
+  font-family:'Press Start 2P',monospace; color:#fff; font-size:clamp(16px,5vw,30px);
+  text-shadow:0 0 24px rgba(255,220,120,.9), 4px 4px 0 #123c1e; text-align:center; padding:0 20px;
+}
+#bonusFlash .bonusSub{
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:clamp(13px,3vw,17px); color:#e8ffe8; text-align:center; padding:0 20px;
+}
+@keyframes bonusPop{
+  0%{transform:scale(.2) rotate(0deg); opacity:0;}
+  20%{transform:scale(1.3) rotate(-8deg); opacity:1;}
+  35%{transform:scale(1) rotate(6deg);}
+  50%{transform:scale(1.15) rotate(-4deg);}
+  65%{transform:scale(1) rotate(0deg);}
+  85%{transform:scale(1.05) translateY(-6px);}
+  100%{transform:scale(1) translateY(0);}
+}
+@keyframes bonusSparkle{
+  0%,100%{opacity:.6;} 50%{opacity:1;}
+}
+</style>
+</head>
+<body>
+<h1>💣 BOMBER CERDAS</h1>
+<p class="tag">Hancurkan tembok, kalahkan musuh, dan jawab soal untuk naik level. Belajar sambil main!</p>
+
+<!-- ============ HALAMAN COVER ============ -->
+<div id="coverScreen">
+  <img src="https://lh3.googleusercontent.com/d/189sdSQdDy6PKnfGZ_SkZg76OWEHRmXq_=w1000" alt="Cover Bomber Cerdas" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=view&id=189sdSQdDy6PKnfGZ_SkZg76OWEHRmXq_';">
+  <button id="coverBtn" class="bigbtn">MULAI</button>
+</div>
+
+<!-- ============ LAYAR AWAL: SEKOLAH / KELAS / NAMA / MATERI ============ -->
+<div id="startScreen" class="hidden">
+  <h2>Mulai Bermain</h2>
+  <div class="formRow">
+    <label for="selSekolah">Sekolah</label>
+    <select id="selSekolah"><option value="">Memuat...</option></select>
+  </div>
+  <div class="formRow">
+    <label for="selKelas">Kelas</label>
+    <select id="selKelas" disabled><option value="">Pilih sekolah dulu</option></select>
+  </div>
+  <div class="formRow">
+    <label for="selNama">Nama</label>
+    <select id="selNama" disabled><option value="">Pilih kelas dulu</option></select>
+  </div>
+  <div class="formRow">
+    <label for="selMateri">Materi</label>
+    <select id="selMateri"><option value="">Memuat...</option></select>
+  </div>
+  <div id="prevScoreInfo"></div>
+  <button id="startBtn" class="bigbtn" disabled>MULAI MAIN</button>
+  <div id="startError"></div>
+</div>
+
+<!-- ============ AREA PERMAINAN ============ -->
+<div id="gameArea" class="hidden">
+  <div class="hud" id="hudRow">
+    <div class="chip">❤️ <b id="hudLives">3</b></div>
+    <div class="chip">⭐ <b id="hudScore">0</b></div>
+    <div class="chip">🎯 LV <b id="hudLevel">1</b>/<b id="hudLevelMax">1</b></div>
+    <div class="chip">💣 <b id="hudBombs">1</b></div>
+    <div class="chip">🔥 <b id="hudRange">1</b></div>
+    <div class="chip" id="muteBtn">🔊</div>
+  </div>
+
+  <div id="wrap">
+    <canvas id="game" width="600" height="440"></canvas>
+    <div id="overlay">
+      <h2 id="ovTitle">Soal!</h2>
+      <div id="qtext"></div>
+      <div id="choices"></div>
+      <div id="feedback"></div>
+      <div id="serverScoreInfo"></div>
+      <button class="bigbtn" id="ovBtn" style="display:none">LANJUT</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div class="row"><button id="up">▲</button></div>
+    <div class="row">
+      <button id="left">◀</button>
+      <button id="bombBtn">💣</button>
+      <button id="right">▶</button>
+    </div>
+    <div class="row"><button id="down">▼</button></div>
+  </div>
+
+  <p id="howto">Panah / WASD untuk gerak, SPASI untuk pasang bom. Kotak yang berkedip 📖 berisi soal — injak untuk menjawab dan dapatkan hadiah. Kalahkan semua musuh untuk naik level!</p>
+</div>
+
+<div id="hitFlash"><div class="hitText"></div><div class="hitSub"></div></div>
+<div id="bonusFlash"><div class="bonusHeart">❤️</div><div class="bonusText">BONUS NYAWA!</div><div class="bonusSub"></div></div>
+
+<script>
+/* ============================================================
+ *  KONEKSI KE GOOGLE APPS SCRIPT (Code.gs)
+ * ============================================================ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbwi4HNUKpArOBMNPg8vXzf3EcTHVkz7ZD9kV9Su_x5rAnQtgQ-rvfXojRtaBojtN_sb/exec';
+
+async function gasGet(action, params={}){
+  const qs = new URLSearchParams({action, ...params});
+  const res = await fetch(`${API_URL}?${qs.toString()}`);
+  const json = await res.json();
+  if(!json.success) throw new Error(json.error || 'Gagal memuat data dari server');
+  return json.data;
+}
+async function gasPost(action, payload={}){
+  // Content-Type text/plain dipakai supaya browser tidak mengirim preflight OPTIONS
+  // (Apps Script Web App tidak selalu menangani preflight dengan baik).
+  const res = await fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({action, payload})
+  });
+  const json = await res.json();
+  if(!json.success) throw new Error(json.error || 'Gagal mengirim data ke server');
+  return json.data;
+}
+
+/* ============================================================
+ *  SPRITE ARAH GERAK PEMAIN (dari Google Drive)
+ * ============================================================ */
+const PLAYER_SPRITE_URLS = {
+  left : 'https://lh3.googleusercontent.com/d/1My22Kb2ljrj_PK_CIshpMxepfj3gEGhN',
+  right: 'https://lh3.googleusercontent.com/d/1-P9FlTvh_Bk7csrkEXMnuLqBRtayKu4X',
+  up   : 'https://lh3.googleusercontent.com/d/1bjePGEJsXAXEJi3UAYWa5vCCnOnKYSUV',
+  down : 'https://lh3.googleusercontent.com/d/1_Wuly6v3I7OmKBgQnWYim4P6Vw6_nHJO',
+  idle : 'https://lh3.googleusercontent.com/d/1fbPX2R2tUYxRg_xwhIHLqYuWiQN2tLm6'
+};
+const spriteImgs = {};
+Object.entries(PLAYER_SPRITE_URLS).forEach(([key,url])=>{
+  const img = new Image();
+  img.src = url; // kalau gagal dimuat (mis. izin share belum "Anyone with link"), otomatis fallback ke emoji 🧑
+  spriteImgs[key] = img;
+});
+function spriteReady(key){
+  const img = spriteImgs[key];
+  return img && img.complete && img.naturalWidth > 0;
+}
+
+let bgArenaImg = null;
+function setupBgArena(url){
+  if(!url) return;
+  const img = new Image();
+  img.onload = ()=>{ bgArenaImg = img; };
+  img.onerror = ()=>{ bgArenaImg = null; };
+  img.src = url;
+}
+function setupBgMusic(url){
+  if(!url) return;
+  let audio = document.getElementById('bgMusic');
+  if(!audio){
+    audio = document.createElement('audio');
+    audio.id = 'bgMusic'; audio.loop = true; audio.style.display='none';
+    document.body.appendChild(audio);
+  }
+  audio.src = url;
+  audio.volume = bgMusicVolume;
+  audio.muted = musicMuted;
+  audio.play().catch(()=>{ /* autoplay diblokir browser, butuh interaksi user pertama (klik MULAI sudah cukup) */ });
+}
+let musicMuted = false;
+document.getElementById('muteBtn').addEventListener('click', ()=>{
+  musicMuted = !musicMuted;
+  const audio = document.getElementById('bgMusic');
+  if(audio) audio.muted = musicMuted;
+  document.getElementById('muteBtn').textContent = musicMuted ? '🔇' : '🔊';
+});
+
+/* ============================================================
+ *  SOUND EFFECTS: langkah kaki & ledakan bom (disintesis via
+ *  Web Audio API, tanpa file eksternal) + duck BGM ke 25%
+ * ============================================================ */
+let sfxCtx = null;
+function getSfxCtx(){
+  if(!sfxCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(AC) sfxCtx = new AC();
+  }
+  if(sfxCtx && sfxCtx.state==='suspended') sfxCtx.resume().catch(()=>{});
+  return sfxCtx;
+}
+const bgMusicVolume = 0.25;    // volume normal BGM (25%)
+const duckedVolume  = 0.25;    // volume BGM saat SFX berbunyi (tetap 25%)
+let duckCount = 0;
+function duckMusic(){
+  duckCount++;
+  const audio = document.getElementById('bgMusic');
+  if(audio) audio.volume = duckedVolume;
+}
+function unduckMusic(){
+  duckCount = Math.max(0, duckCount-1);
+  if(duckCount===0){
+    const audio = document.getElementById('bgMusic');
+    if(audio) audio.volume = bgMusicVolume;
+  }
+}
+function playStepSound(){
+  if(musicMuted) return;
+  const ctx = getSfxCtx();
+  if(!ctx) return;
+  duckMusic();
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type='square';
+  osc.frequency.setValueAtTime(110 + Math.random()*30, now);
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.exponentialRampToValueAtTime(0.18, now+0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, now+0.09);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(now); osc.stop(now+0.1);
+  setTimeout(unduckMusic, 180);
+}
+function playExplosionSound(){
+  if(musicMuted) return;
+  const ctx = getSfxCtx();
+  if(!ctx) return;
+  duckMusic();
+  const now = ctx.currentTime;
+  const bufSize = ctx.sampleRate*0.5;
+  const noiseBuf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  for(let i=0;i<bufSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufSize);
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuf;
+  const filter = ctx.createBiquadFilter();
+  filter.type='lowpass';
+  filter.frequency.setValueAtTime(1200, now);
+  filter.frequency.exponentialRampToValueAtTime(80, now+0.5);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.5, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now+0.5);
+  noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+  noise.start(now); noise.stop(now+0.5);
+  const osc = ctx.createOscillator();
+  const oGain = ctx.createGain();
+  osc.type='sine';
+  osc.frequency.setValueAtTime(90, now);
+  osc.frequency.exponentialRampToValueAtTime(30, now+0.4);
+  oGain.gain.setValueAtTime(0.4, now);
+  oGain.gain.exponentialRampToValueAtTime(0.001, now+0.4);
+  osc.connect(oGain); oGain.connect(ctx.destination);
+  osc.start(now); osc.stop(now+0.4);
+  setTimeout(unduckMusic, 550);
+}
+
+/* ============================================================
+ *  LAYAR COVER: tombol MULAI -> tampilkan form Sekolah/Kelas/dst
+ * ============================================================ */
+document.getElementById('coverBtn').addEventListener('click', ()=>{
+  document.getElementById('coverScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+});
+
+/* ============================================================
+ *  LAYAR AWAL: pilih Sekolah / Kelas / Nama / Materi
+ * ============================================================ */
+const selSekolah = document.getElementById('selSekolah');
+const selKelas   = document.getElementById('selKelas');
+const selNama    = document.getElementById('selNama');
+const selMateri  = document.getElementById('selMateri');
+const startBtn   = document.getElementById('startBtn');
+const startError = document.getElementById('startError');
+const prevScoreInfo = document.getElementById('prevScoreInfo');
+
+function fillSelect(el, arr, placeholder){
+  el.innerHTML='';
+  const ph=document.createElement('option'); ph.value=''; ph.textContent=placeholder;
+  el.appendChild(ph);
+  (arr||[]).forEach(v=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=v; el.appendChild(o);
+  });
+  el.disabled=false;
+}
+
+async function initStartScreen(){
+  try{
+    const [sekolahList, materiList] = await Promise.all([
+      gasGet('getSekolahList'),
+      gasGet('getMateriList')
+    ]);
+    fillSelect(selSekolah, sekolahList, '-- Pilih Sekolah --');
+    fillSelect(selMateri, materiList, '-- Pilih Materi --');
+  }catch(err){
+    startError.textContent = 'Gagal memuat data dari server: ' + err.message;
+  }
+}
+
+selSekolah.addEventListener('change', async ()=>{
+  startError.textContent='';
+  selKelas.innerHTML='<option value="">Memuat...</option>'; selKelas.disabled=true;
+  selNama.innerHTML='<option value="">Pilih kelas dulu</option>'; selNama.disabled=true;
+  checkStartReady();
+  if(!selSekolah.value) return;
+  try{
+    const kelasList = await gasGet('getKelasList', {sekolah:selSekolah.value});
+    fillSelect(selKelas, kelasList, '-- Pilih Kelas --');
+  }catch(err){ startError.textContent = 'Gagal memuat kelas: ' + err.message; }
+  checkStartReady();
+});
+
+selKelas.addEventListener('change', async ()=>{
+  startError.textContent='';
+  selNama.innerHTML='<option value="">Memuat...</option>'; selNama.disabled=true;
+  checkStartReady();
+  if(!selKelas.value) return;
+  try{
+    const namaList = await gasGet('getNamaList', {sekolah:selSekolah.value, kelas:selKelas.value});
+    fillSelect(selNama, namaList, '-- Pilih Nama --');
+  }catch(err){ startError.textContent = 'Gagal memuat nama: ' + err.message; }
+  checkStartReady();
+});
+
+[selNama, selMateri].forEach(el=>el.addEventListener('change', async ()=>{
+  checkStartReady();
+  prevScoreInfo.textContent='';
+  if(selNama.value && selMateri.value){
+    try{
+      const info = await gasGet('getSkorPemain', {
+        sekolah:selSekolah.value, kelas:selKelas.value, nama:selNama.value, materi:selMateri.value
+      });
+      prevScoreInfo.textContent = info.found
+        ? `Skor akumulasi kamu sebelumnya untuk materi ini: ${info.skor}`
+        : 'Belum ada skor sebelumnya untuk materi ini.';
+    }catch(err){ /* diamkan, bukan hal fatal */ }
+  }
+}));
+
+function checkStartReady(){
+  startBtn.disabled = !(selSekolah.value && selKelas.value && selNama.value && selMateri.value);
+}
+
+let sessionInfo=null, apiQuestions=[], totalLevels=3, stepCount=0, startTime=0, scoreSubmitted=false, gameStarted=false;
+
+startBtn.addEventListener('click', async ()=>{
+  startError.textContent='';
+  startBtn.disabled=true; startBtn.textContent='Memuat soal...';
+  try{
+    const soalData = await gasGet('getSoalByMateri', {materi:selMateri.value});
+    apiQuestions = soalData.questions || [];
+    totalLevels = Math.max(3, Math.min(10, soalData.doorCount || apiQuestions.length || 3));
+    sessionInfo = {sekolah:selSekolah.value, kelas:selKelas.value, nama:selNama.value, materi:selMateri.value};
+    setupBgMusic(soalData.bgMusik);
+    setupBgArena(soalData.bgArena);
+
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameArea').classList.remove('hidden');
+    document.getElementById('hudLevelMax').textContent = totalLevels;
+
+    stepCount=0; startTime=Date.now(); scoreSubmitted=false; gameStarted=true;
+    level=1; score=0; lives=3; gameOver=false; paused=false;
+    genLevel(level); updateHUD();
+  }catch(err){
+    startError.textContent = 'Gagal memuat soal: ' + err.message;
+  }finally{
+    startBtn.disabled=false; startBtn.textContent='MULAI MAIN';
+  }
+});
+
+function backToStart(){
+  gameStarted=false; paused=true;
+  document.getElementById('gameArea').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+  // refresh info skor sebelumnya (sudah bertambah setelah sesi barusan)
+  selNama.dispatchEvent(new Event('change'));
+}
+
+/* ============================================================
+ *  MESIN GAME BOMBERMAN (grid, bom, musuh, HUD)
+ * ============================================================ */
+const COLS=15, ROWS=11, TILE=40;
+const canvas=document.getElementById('game'), ctx=canvas.getContext('2d');
+const EMPTY=0, HARD=1, SOFT=2, BOOK=3, POWER=4;
+let grid=[], bombs=[], explosions=[], enemies=[], powerTiles={};
+let player, level=1, score=0, lives=3, paused=true, gameOver=false;
+let correctStreak=0;
+let lastMove=0, moveDelay=115, lastEnemyMove=0;
+const keys={};
+const touchDir={up:false,down:false,left:false,right:false};
+
+/* ---- Tema arena per level (ganti suasana tiap naik level) ---- */
+const LEVEL_THEMES=[
+  {name:'Hutan Purba', floor:'rgba(24,52,32,0.85)', hardOuter:'#2f5233', hardInner:'#3f7a46', softOuter:'#4f8f52', softInner:'#6ab86d', border:'#3f7a46', glow:'rgba(70,160,80,.5)', decor:['🍃','🌿','🌸']},
+  {name:'Gua Kristal', floor:'rgba(28,32,66,0.85)', hardOuter:'#2c2f66', hardInner:'#4a4fb0', softOuter:'#6a5aa8', softInner:'#8f7fe0', border:'#4a4fb0', glow:'rgba(130,120,255,.5)', decor:['💎','✨','🔷']},
+  {name:'Gurun Senja', floor:'rgba(66,42,18,0.85)', hardOuter:'#5a3a1e', hardInner:'#8a5a2e', softOuter:'#c98a3e', softInner:'#e0ab5e', border:'#8a5a2e', glow:'rgba(230,150,60,.5)', decor:['🌵','🏜️','☀️']},
+  {name:'Lautan Beku', floor:'rgba(18,42,58,0.85)', hardOuter:'#1e4a5c', hardInner:'#2e7a94', softOuter:'#4fb8d8', softInner:'#8fe0f0', border:'#2e7a94', glow:'rgba(90,200,230,.5)', decor:['❄️','🧊','🌊']},
+  {name:'Kastil Senja', floor:'rgba(52,22,52,0.85)', hardOuter:'#4a1e4a', hardInner:'#7a2e7a', softOuter:'#a84fa8', softInner:'#d08fd0', border:'#7a2e7a', glow:'rgba(210,100,210,.5)', decor:['🕯️','🦇','🌙']},
+  {name:'Taman Bunga', floor:'rgba(58,20,30,0.85)', hardOuter:'#5a1e2e', hardInner:'#8a2e46', softOuter:'#d84f6a', softInner:'#f08fa0', border:'#8a2e46', glow:'rgba(230,90,120,.5)', decor:['🌷','🌺','🦋']},
+];
+const BOSS_THEME={name:'Arena Bos', floor:'rgba(48,10,10,0.9)', hardOuter:'#3a0e0e', hardInner:'#6e1414', softOuter:'#8a1f1f', softInner:'#c23a3a', border:'#c23a3a', glow:'rgba(255,60,60,.65)', decor:['🔥','💀','⚠️']};
+let currentTheme=LEVEL_THEMES[0];
+let decorTiles=[];
+function isBossLevel(lv){ return lv%4===0; }
+function getTheme(lv){ return isBossLevel(lv) ? BOSS_THEME : LEVEL_THEMES[(lv-1)%LEVEL_THEMES.length]; }
+function applyThemeStyle(theme){
+  canvas.style.borderColor=theme.border;
+  canvas.style.boxShadow='0 10px 30px rgba(0,0,0,.5), 0 0 40px '+theme.glow;
+}
+
+function genLevel(lv){
+  grid=Array.from({length:ROWS},()=>Array(COLS).fill(EMPTY));
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    if(x===0||y===0||x===COLS-1||y===ROWS-1) grid[y][x]=HARD;
+    else if(x%2===0 && y%2===0) grid[y][x]=HARD;
+  }
+  const safeCells=[[1,1],[2,1],[1,2],[COLS-2,ROWS-2],[COLS-3,ROWS-2],[COLS-2,ROWS-3]];
+  const density=0.55+Math.min(lv*0.03,0.25);
+  for(let y=1;y<ROWS-1;y++)for(let x=1;x<COLS-1;x++){
+    if(grid[y][x]===HARD) continue;
+    if(safeCells.some(c=>c[0]===x&&c[1]===y)) continue;
+    if(Math.random()<density) grid[y][x]=SOFT;
+  }
+
+  // Tema & dekorasi arena baru tiap level
+  currentTheme=getTheme(lv);
+  applyThemeStyle(currentTheme);
+  decorTiles=[];
+  const hardCells=[];
+  for(let y=1;y<ROWS-1;y++)for(let x=1;x<COLS-1;x++){ if(grid[y][x]===HARD) hardCells.push([x,y]); }
+  const decorCount=Math.min(8, Math.floor(hardCells.length*0.35));
+  for(let i=0;i<decorCount && hardCells.length>0;i++){
+    const idx=Math.floor(Math.random()*hardCells.length);
+    const [dx,dy]=hardCells.splice(idx,1)[0];
+    decorTiles.push({x:dx,y:dy,icon:currentTheme.decor[Math.floor(Math.random()*currentTheme.decor.length)]});
+  }
+
+  bombs=[]; explosions=[]; powerTiles={};
+  const prevRange = player ? player.range : 1;
+  const prevBombsMax = player ? player.bombsMax : 1;
+  player={x:1,y:1,lives:lives,bombs:1,range:prevRange,score:score,alive:true,invuln:0,dir:'down'};
+  player.bombsMax=Math.max(1, Math.min(4, prevBombsMax, 1+Math.floor((score)/300)+1));
+  enemies=[];
+  if(isBossLevel(lv)){
+    const bx=COLS-2, by=ROWS-2;
+    const bossHp=3+Math.floor(lv/4);
+    enemies.push({x:bx,y:by,alive:true,isBoss:true,hp:bossHp,maxHp:bossHp,speed:1,dir:randDir(),moveT:0,range:2+Math.floor(lv/8),bombCooldown:1800+Math.random()*800});
+  } else {
+    const nEnemy=Math.min(2+lv,7);
+    let tries=0;
+    while(enemies.length<nEnemy && tries<300){
+      tries++;
+      const ex=1+Math.floor(Math.random()*(COLS-2));
+      const ey=1+Math.floor(Math.random()*(ROWS-2));
+      if(grid[ey][ex]!==EMPTY) continue;
+      if(Math.abs(ex-1)+Math.abs(ey-1)<4) continue;
+      enemies.push({x:ex,y:ey,alive:true,speed:0.9+lv*0.05,dir:randDir(),moveT:0});
+    }
+  }
+}
+
+function randDir(){const d=[[1,0],[-1,0],[0,1],[0,-1]]; return d[Math.floor(Math.random()*4)];}
+
+// ---- Bank soal cadangan (dipakai kalau materi dari server kosong / gagal dimuat) ----
+const knowledgeBank=[
+  {q:"Ibu kota Indonesia adalah?",a:["Jakarta","Bandung","Surabaya","Medan"],c:0},
+  {q:"Planet terdekat dengan Matahari?",a:["Venus","Merkurius","Bumi","Mars"],c:1},
+  {q:"Berapa jumlah provinsi di Indonesia saat ini?",a:["34","38","30","40"],c:1},
+  {q:"Hewan apa yang dijuluki 'raja hutan'?",a:["Harimau","Gajah","Singa","Beruang"],c:2},
+  {q:"Proses tumbuhan membuat makanan disebut?",a:["Respirasi","Fotosintesis","Transpirasi","Fermentasi"],c:1},
+  {q:"Lambang negara Indonesia adalah?",a:["Garuda Pancasila","Elang Jawa","Komodo","Rajawali"],c:0},
+  {q:"1 kilometer sama dengan berapa meter?",a:["10","100","1000","10000"],c:2},
+  {q:"Penemu bola lampu adalah?",a:["Newton","Einstein","Edison","Tesla"],c:2},
+  {q:"Gunung tertinggi di dunia?",a:["K2","Everest","Kilimanjaro","Rinjani"],c:1},
+  {q:"Warna bendera Indonesia?",a:["Merah-Putih","Merah-Kuning","Putih-Biru","Kuning-Hijau"],c:0},
+];
+function mathQuestion(lv){
+  const max=6+lv*2;
+  const a=1+Math.floor(Math.random()*max), b=1+Math.floor(Math.random()*max);
+  const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*ops.length)];
+  let ans, text;
+  if(op==='+'){ans=a+b; text=`${a} + ${b} = ?`;}
+  else if(op==='-'){const hi=Math.max(a,b), lo=Math.min(a,b); ans=hi-lo; text=`${hi} - ${lo} = ?`;}
+  else {ans=a*b; text=`${a} × ${b} = ?`;}
+  const opts=new Set([ans]);
+  while(opts.size<4) opts.add(Math.max(0,ans+Math.floor(Math.random()*11)-5));
+  const arr=[...opts].sort(()=>Math.random()-0.5);
+  return {q:text, a:arr.map(String), c:arr.indexOf(ans)};
+}
+function randomQuestion(){
+  if(apiQuestions.length>0){
+    const q = apiQuestions[Math.floor(Math.random()*apiQuestions.length)];
+    return {q:q.q, a:q.opts, c:q.a, gambar:q.gambar};
+  }
+  if(Math.random()<0.5) return mathQuestion(level);
+  return knowledgeBank[Math.floor(Math.random()*knowledgeBank.length)];
+}
+
+function askQuestion(onDone){
+  paused=true;
+  const {q,a,c,gambar}=randomQuestion();
+  document.getElementById('ovTitle').textContent='📖 Soal Belajar!';
+  const qtextEl=document.getElementById('qtext');
+  qtextEl.innerHTML='';
+  if(gambar){
+    const img=document.createElement('img');
+    img.src=gambar; img.alt='';
+    img.onerror=()=>{ img.style.display='none'; };
+    qtextEl.appendChild(img);
+  }
+  const qdiv=document.createElement('div');
+  qdiv.textContent=q;
+  qtextEl.appendChild(qdiv);
+  document.getElementById('feedback').textContent='';
+  document.getElementById('serverScoreInfo').textContent='';
+  const choicesEl=document.getElementById('choices');
+  choicesEl.innerHTML='';
+  const ovBtn=document.getElementById('ovBtn');
+  ovBtn.style.display='none';
+  a.forEach((opt,i)=>{
+    const b=document.createElement('button');
+    b.className='choice'; b.textContent=opt;
+    b.onclick=()=>{
+      [...choicesEl.children].forEach(ch=>ch.onclick=null);
+      if(i===c){
+        b.classList.add('correct');
+        document.getElementById('feedback').textContent='Benar! +50 poin dan hadiah 🎁';
+        document.getElementById('feedback').style.color='var(--good)';
+        score+=50; player.score=score;
+        if(Math.random()<0.6) grantPower();
+        correctStreak++;
+        if(correctStreak>=5){
+          correctStreak=0;
+          lives++;
+          triggerBonusLife();
+        }
+      } else {
+        b.classList.add('wrong');
+        choicesEl.children[c].classList.add('correct');
+        document.getElementById('feedback').textContent='Kurang tepat. Tetap semangat!';
+        document.getElementById('feedback').style.color='var(--bad)';
+        score=Math.max(0,score-10); player.score=score;
+      }
+      updateHUD();
+      ovBtn.style.display='inline-block';
+      ovBtn.onclick=()=>{ document.getElementById('overlay').classList.remove('show'); document.getElementById('overlay').classList.remove('quizBg'); document.getElementById('overlay').classList.remove('quizFull'); canvas.classList.remove('arenaHidden'); document.getElementById('hudRow').classList.remove('hidden'); paused=false; onDone&&onDone(); };
+    };
+    choicesEl.appendChild(b);
+  });
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('overlay').classList.add('quizBg');
+  document.getElementById('overlay').classList.add('quizFull');
+  canvas.classList.add('arenaHidden');
+  document.getElementById('hudRow').classList.add('hidden');
+}
+
+function grantPower(){
+  const r=Math.random();
+  if(r<0.5 && player.range<5) player.range++;
+  else if(player.bombsMax<4) player.bombsMax++;
+  else player.range++;
+}
+
+/* ---- Input ---- */
+window.addEventListener('keydown',e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(e.key===' '){ e.preventDefault(); placeBomb(); }
+});
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+function bindHold(id,dirKey,fn){
+  const el=document.getElementById(id);
+  let t;
+  const start=(ev)=>{ev.preventDefault(); touchDir[dirKey]=true; fn(); t=setInterval(fn,140);};
+  const stop=()=>{ touchDir[dirKey]=false; clearInterval(t); };
+  el.addEventListener('touchstart',start); el.addEventListener('mousedown',start);
+  el.addEventListener('touchend',stop); el.addEventListener('mouseup',stop); el.addEventListener('mouseleave',stop);
+}
+bindHold('up','up',()=>tryMove(0,-1));
+bindHold('down','down',()=>tryMove(0,1));
+bindHold('left','left',()=>tryMove(-1,0));
+bindHold('right','right',()=>tryMove(1,0));
+document.getElementById('bombBtn').addEventListener('click',placeBomb);
+
+function currentHeldDir(){
+  if(keys['arrowup']||keys['w']||touchDir.up) return 'up';
+  if(keys['arrowdown']||keys['s']||touchDir.down) return 'down';
+  if(keys['arrowleft']||keys['a']||touchDir.left) return 'left';
+  if(keys['arrowright']||keys['d']||touchDir.right) return 'right';
+  return null;
+}
+
+function tryMove(dx,dy){
+  if(paused||gameOver||!player.alive) return;
+  player.dir = dx===1?'right':dx===-1?'left':dy===1?'down':dy===-1?'up':player.dir;
+  const nx=player.x+dx, ny=player.y+dy;
+  if(grid[ny] && grid[ny][nx]!==undefined && grid[ny][nx]!==HARD && grid[ny][nx]!==SOFT){
+    if(!bombs.some(b=>b.x===nx&&b.y===ny)){
+      player.x=nx; player.y=ny; stepCount++;
+      playStepSound();
+      checkTile();
+    }
+  }
+}
+
+function checkTile(){
+  const t=grid[player.y][player.x];
+  if(t===BOOK){
+    grid[player.y][player.x]=EMPTY;
+    askQuestion();
+  } else if(t===POWER){
+    grid[player.y][player.x]=EMPTY;
+    grantPower(); updateHUD();
+  }
+}
+
+function placeBomb(){
+  if(paused||gameOver||!player.alive) return;
+  const active=bombs.filter(b=>b.owner==='p').length;
+  if(active>=player.bombsMax) return;
+  if(bombs.some(b=>b.x===player.x&&b.y===player.y)) return;
+  bombs.push({x:player.x,y:player.y,t:1500,range:player.range,owner:'p'});
+}
+
+function explodeBomb(b){
+  playExplosionSound();
+  const cells=[[b.x,b.y]];
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    for(let i=1;i<=b.range;i++){
+      const x=b.x+dx*i, y=b.y+dy*i;
+      if(!grid[y] || grid[y][x]===undefined || grid[y][x]===HARD) break;
+      cells.push([x,y]);
+      if(grid[y][x]===SOFT){
+        grid[y][x]= Math.random()<0.35 ? BOOK : (Math.random()<0.15 ? POWER : EMPTY);
+        break;
+      }
+    }
+  }
+  explosions.push({cells,t:400});
+  for(const [x,y] of cells){
+    if(x===player.x && y===player.y && player.invuln<=0 && player.alive && !paused) hitPlayer('bomb');
+    enemies.forEach(en=>{
+      if(en.alive && en.x===x && en.y===y && !(b.owner==='boss' && en.isBoss)){
+        if(en.isBoss){
+          en.hp--;
+          if(en.hp<=0){ en.alive=false; score+=500; player.score=score; }
+        } else {
+          en.alive=false; score+=100; player.score=score;
+        }
+      }
+    });
+  }
+}
+
+function hitPlayer(cause){
+  lives--; player.invuln=1500;
+  updateHUD();
+  triggerHitEffect(cause, lives<=0);
+  if(lives<=0) gameOver=true;
+}
+
+function triggerHitEffect(cause, isFinal){
+  paused=true;
+  if(navigator.vibrate){
+    if(isFinal) navigator.vibrate([120,60,120,60,300]);
+    else if(cause==='bomb') navigator.vibrate([180,50,80]);
+    else navigator.vibrate([60,40,60,40,60,40,120]);
+  }
+  const el=document.getElementById('hitFlash');
+  el.className='';
+  el.classList.add(cause==='bomb'?'bomb':'monster');
+  el.querySelector('.hitText').textContent = cause==='bomb' ? '💥 KENA BOM!' : '👾 DITERKAM MONSTER!';
+  el.querySelector('.hitSub').textContent = isFinal ? 'Nyawa habis...' : `-1 ❤️  Sisa nyawa: ${lives}`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake');
+  setTimeout(()=>{
+    el.classList.remove('show');
+    document.body.classList.remove('shake');
+    if(isFinal){ showGameOver(); }
+    else { paused=false; }
+  }, 1400);
+}
+
+function triggerBonusLife(){
+  updateHUD();
+  if(navigator.vibrate) navigator.vibrate([80,40,80,40,160]);
+  const el=document.getElementById('bonusFlash');
+  el.querySelector('.bonusSub').textContent=`5 jawaban benar terkumpul! Nyawa sekarang: ${lives} ❤️`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  setTimeout(()=>{ el.classList.remove('show'); }, 1800);
+}
+
+function updateHUD(){
+  document.getElementById('hudLives').textContent=lives;
+  document.getElementById('hudScore').textContent=score;
+  document.getElementById('hudLevel').textContent=level;
+  document.getElementById('hudLevelMax').textContent=totalLevels;
+  document.getElementById('hudBombs').textContent=player.bombsMax;
+  document.getElementById('hudRange').textContent=player.range;
+}
+
+/* ---- Kirim skor ke Google Sheet lewat Code.gs (action: submitSkor) ---- */
+async function submitScoreToServer(status){
+  if(scoreSubmitted || !sessionInfo) return;
+  scoreSubmitted = true;
+  const waktu = Math.round((Date.now()-startTime)/1000);
+  const infoEl=document.getElementById('serverScoreInfo');
+  if(infoEl) infoEl.textContent = 'Menyimpan skor ke server...';
+  try{
+    const result = await gasPost('submitSkor', {
+      sekolah: sessionInfo.sekolah, kelas: sessionInfo.kelas, nama: sessionInfo.nama, materi: sessionInfo.materi,
+      status, skor: score, waktu, langkah: stepCount, nyawaSisa: lives
+    });
+    if(infoEl) infoEl.textContent = `Tersimpan! Skor akumulasi kamu untuk materi ini: ${result.skorGabungan}`;
+  }catch(err){
+    if(infoEl) infoEl.textContent = 'Gagal menyimpan skor ke server: ' + err.message;
+  }
+}
+
+function showGameOver(){
+  submitScoreToServer('Kalah');
+  document.getElementById('ovTitle').textContent='💀 Game Over';
+  document.getElementById('qtext').textContent=`Skor akhir kamu: ${score}. Coba lagi yuk!`;
+  document.getElementById('choices').innerHTML='';
+  document.getElementById('feedback').textContent='';
+  const ovBtn=document.getElementById('ovBtn');
+  ovBtn.textContent='KEMBALI KE MENU'; ovBtn.style.display='inline-block';
+  ovBtn.onclick=()=>{ document.getElementById('overlay').classList.remove('show'); backToStart(); };
+  document.getElementById('overlay').classList.add('show');
+}
+
+function showFinalWin(){
+  paused=true; gameOver=true;
+  submitScoreToServer('Menang');
+  document.getElementById('ovTitle').textContent='🏆 Menang!';
+  document.getElementById('qtext').textContent=`Selamat! Kamu menyelesaikan semua ${totalLevels} level dengan skor ${score}.`;
+  document.getElementById('choices').innerHTML='';
+  document.getElementById('feedback').textContent='';
+  const ovBtn=document.getElementById('ovBtn');
+  ovBtn.textContent='KEMBALI KE MENU'; ovBtn.style.display='inline-block';
+  ovBtn.onclick=()=>{ document.getElementById('overlay').classList.remove('show'); backToStart(); };
+  document.getElementById('overlay').classList.add('show');
+}
+
+function showLevelUp(){
+  paused=true;
+  const nextLv=level+1;
+  const nextIsBoss=isBossLevel(nextLv);
+  document.getElementById('ovTitle').textContent= nextIsBoss ? '⚠️ Bos Menanti!' : '🎉 Level Selesai!';
+  document.getElementById('qtext').textContent= nextIsBoss
+    ? `Hebat! Bersiap melawan BOS di level ${nextLv} dari ${totalLevels}. Bos ini bisa memasang bom seperti kamu — hati-hati!`
+    : `Hebat! Lanjut ke level ${nextLv} dari ${totalLevels}. Suasana arena akan berubah!`;
+  document.getElementById('choices').innerHTML='';
+  document.getElementById('feedback').textContent='';
+  document.getElementById('serverScoreInfo').textContent='';
+  const ovBtn=document.getElementById('ovBtn');
+  ovBtn.textContent= nextIsBoss ? 'LAWAN BOS!' : 'LANJUT';
+  ovBtn.style.display='inline-block';
+  ovBtn.onclick=()=>{ level++; document.getElementById('overlay').classList.remove('show'); paused=false; genLevel(level); updateHUD(); };
+  document.getElementById('overlay').classList.add('show');
+}
+
+/* ---- Game loop ---- */
+function step(ts){
+  requestAnimationFrame(step);
+  if(!gameStarted) return;
+  if(paused||gameOver) { draw(); return; }
+  if(player.invuln>0) player.invuln-=16;
+
+  if(ts-lastMove>moveDelay){
+    if(keys['arrowup']||keys['w']) tryMove(0,-1);
+    else if(keys['arrowdown']||keys['s']) tryMove(0,1);
+    else if(keys['arrowleft']||keys['a']) tryMove(-1,0);
+    else if(keys['arrowright']||keys['d']) tryMove(1,0);
+    lastMove=ts;
+  }
+
+  bombs.forEach(b=>b.t-=16);
+  bombs.filter(b=>b.t<=0).forEach(explodeBomb);
+  bombs=bombs.filter(b=>b.t>0);
+  explosions.forEach(e=>e.t-=16);
+  explosions=explosions.filter(e=>e.t>0);
+
+  if(ts-lastEnemyMove>260){
+    enemies.forEach(en=>{
+      if(!en.alive) return;
+      let candidates;
+      if(en.isBoss){
+        const ddx=player.x-en.x, ddy=player.y-en.y;
+        candidates=[];
+        if(Math.abs(ddx)>=Math.abs(ddy)){
+          if(ddx!==0) candidates.push([Math.sign(ddx),0]);
+          if(ddy!==0) candidates.push([0,Math.sign(ddy)]);
+        } else {
+          if(ddy!==0) candidates.push([0,Math.sign(ddy)]);
+          if(ddx!==0) candidates.push([Math.sign(ddx),0]);
+        }
+        candidates.push(randDir(),randDir());
+      } else {
+        candidates=[en.dir, randDir(), randDir(), randDir()];
+      }
+      let moved=false;
+      for(let i=0;i<candidates.length && !moved;i++){
+        const [dx,dy]=candidates[i];
+        const nx=en.x+dx, ny=en.y+dy;
+        if(grid[ny] && (grid[ny][nx]===EMPTY || grid[ny][nx]===BOOK || grid[ny][nx]===POWER)){
+          if(!bombs.some(b=>b.x===nx&&b.y===ny)){
+            en.x=nx; en.y=ny; en.dir=[dx,dy]; moved=true;
+          }
+        }
+      }
+    });
+    lastEnemyMove=ts;
+    enemies.forEach(en=>{
+      if(en.alive && en.x===player.x && en.y===player.y && player.invuln<=0 && !paused) hitPlayer('monster');
+    });
+  }
+
+  enemies.forEach(en=>{
+    if(en.isBoss && en.alive){
+      en.bombCooldown-=16;
+      if(en.bombCooldown<=0 && !bombs.some(b=>b.x===en.x&&b.y===en.y)){
+        bombs.push({x:en.x,y:en.y,t:1500,range:en.range||2,owner:'boss'});
+        en.bombCooldown=2200+Math.random()*1200;
+      }
+    }
+  });
+
+  if(enemies.length>0 && enemies.every(e=>!e.alive) && !paused){
+    if(level>=totalLevels) showFinalWin();
+    else showLevelUp();
+  }
+
+  draw();
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(bgArenaImg){
+    ctx.globalAlpha=0.35;
+    ctx.drawImage(bgArenaImg,0,0,canvas.width,canvas.height);
+    ctx.globalAlpha=1;
+  }
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x], px=x*TILE, py=y*TILE;
+    ctx.fillStyle=currentTheme.floor; ctx.fillRect(px,py,TILE,TILE);
+    if(t===HARD){ ctx.fillStyle=currentTheme.hardOuter; ctx.fillRect(px+1,py+1,TILE-2,TILE-2); ctx.fillStyle=currentTheme.hardInner; ctx.fillRect(px+4,py+4,TILE-8,TILE-8);}
+    else if(t===SOFT){ ctx.fillStyle=currentTheme.softOuter; ctx.fillRect(px+2,py+2,TILE-4,TILE-4); ctx.fillStyle=currentTheme.softInner; ctx.fillRect(px+2,py+2,TILE-4,6);}
+    else if(t===BOOK){ ctx.font='24px serif'; ctx.textAlign='center'; ctx.fillText('📖',px+TILE/2,py+TILE/2+8);}
+    else if(t===POWER){ ctx.font='22px serif'; ctx.textAlign='center'; ctx.fillText('🎁',px+TILE/2,py+TILE/2+8);}
+  }
+  decorTiles.forEach(d=>{
+    ctx.globalAlpha=0.9;
+    ctx.font='18px serif'; ctx.textAlign='center';
+    ctx.fillText(d.icon, d.x*TILE+TILE/2, d.y*TILE+TILE/2+7);
+    ctx.globalAlpha=1;
+  });
+  bombs.forEach(b=>{
+    const px=b.x*TILE+TILE/2, py=b.y*TILE+TILE/2;
+    const pulse=1+0.15*Math.sin(b.t/80);
+    ctx.beginPath(); ctx.fillStyle='#222'; ctx.arc(px,py,13*pulse,0,7); ctx.fill();
+    ctx.fillStyle='#ffcd54'; ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('💣',px,py+5);
+  });
+  explosions.forEach(e=>{
+    ctx.fillStyle='rgba(255,107,74,'+Math.min(1,e.t/300)+')';
+    e.cells.forEach(([x,y])=>ctx.fillRect(x*TILE+3,y*TILE+3,TILE-6,TILE-6));
+  });
+  enemies.forEach(en=>{
+    if(!en.alive) return;
+    const cx=en.x*TILE+TILE/2, cy=en.y*TILE+TILE/2;
+    if(en.isBoss){
+      const pulse=1+0.12*Math.sin(Date.now()/200);
+      ctx.beginPath(); ctx.fillStyle='rgba(255,60,60,0.25)'; ctx.arc(cx,cy,TILE*0.75*pulse,0,7); ctx.fill();
+      ctx.font='34px serif'; ctx.textAlign='center';
+      ctx.fillText('👹', cx, cy+11);
+      const barW=TILE*1.3, barX=cx-barW/2, barY=en.y*TILE-8;
+      ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(barX,barY,barW,6);
+      ctx.fillStyle='#ff5d7a'; ctx.fillRect(barX,barY,barW*Math.max(0,en.hp/en.maxHp),6);
+    } else {
+      ctx.font='26px serif'; ctx.textAlign='center';
+      ctx.fillText('👾',cx,cy+9);
+    }
+  });
+  if(player.alive){
+    ctx.globalAlpha = player.invuln>0 ? (Math.floor(player.invuln/100)%2===0?0.3:1) : 1;
+    const dirKey = currentHeldDir() || 'idle';
+    if(spriteReady(dirKey)){
+      ctx.drawImage(spriteImgs[dirKey], player.x*TILE+2, player.y*TILE+2, TILE-4, TILE-4);
+    } else {
+      ctx.font='28px serif'; ctx.textAlign='center';
+      ctx.fillText('🧑', player.x*TILE+TILE/2, player.y*TILE+TILE/2+10);
+    }
+    ctx.globalAlpha=1;
+  }
+}
+
+initStartScreen();
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
